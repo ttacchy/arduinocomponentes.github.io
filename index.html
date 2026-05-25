@@ -73,9 +73,12 @@
 </div>
 
 <script>
+    // ========== CONFIGURAÇÃO (já com suas chaves) ==========
     const SUPABASE_URL = 'https://xrekjwhvaaepvljzivri.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZWtqd2h2YWFlcHZsanppdnJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NDQ1NTYsImV4cCI6MjA5NTIyMDU1Nn0.-0KA_natcTX7wIoGbBULbEnoGZhZjqDRDjNXMlOroG8';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Cria o cliente Supabase (sem conflito, pois a variável 'supabase' é a global da biblioteca)
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const BUCKET_NAME = 'componentes-imagens';
 
     let currentUser = null;
@@ -99,7 +102,7 @@
     const componentsContainer = document.getElementById('components-container');
 
     async function fetchUserRole(userId) {
-        const { data, error } = await supabase
+        const { data, error } = await _supabase
             .from('perfis')
             .select('role')
             .eq('id', userId)
@@ -112,7 +115,7 @@
     }
 
     async function checkSession() {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await _supabase.auth.getSession();
         if (session) {
             currentUser = session.user;
             userRole = await fetchUserRole(currentUser.id);
@@ -147,7 +150,7 @@
         const email = emailInput.value.trim();
         const password = passwordInput.value;
         loginMessage.innerText = '';
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
         if (error) {
             loginMessage.innerText = '❌ ' + error.message;
             return;
@@ -159,14 +162,14 @@
     });
 
     logoutBtn.addEventListener('click', async () => {
-        await supabase.auth.signOut();
+        await _supabase.auth.signOut();
         showApp(false);
     });
 
     async function loadComponents() {
         if (!currentUser) return;
         try {
-            const { data, error } = await supabase.from('componentes').select('*').order('id');
+            const { data, error } = await _supabase.from('componentes').select('*').order('id');
             if (error) throw error;
             renderComponents(data || []);
         } catch (err) {
@@ -175,21 +178,21 @@
     }
 
     async function addComponent(name, qty, imgUrl) {
-        const { error } = await supabase.from('componentes').insert([{ nome: name, quantidade: qty, imagem_url: imgUrl }]);
+        const { error } = await _supabase.from('componentes').insert([{ nome: name, quantidade: qty, imagem_url: imgUrl }]);
         if (error) throw error;
     }
 
     async function updateComponent(id, name, qty, imgUrl) {
-        const { error } = await supabase.from('componentes').update({ nome: name, quantidade: qty, imagem_url: imgUrl }).eq('id', id);
+        const { error } = await _supabase.from('componentes').update({ nome: name, quantidade: qty, imagem_url: imgUrl }).eq('id', id);
         if (error) throw error;
     }
 
     async function deleteComponent(id, imgUrl) {
-        const { error } = await supabase.from('componentes').delete().eq('id', id);
+        const { error } = await _supabase.from('componentes').delete().eq('id', id);
         if (error) throw error;
         if (imgUrl && imgUrl.includes(BUCKET_NAME)) {
             const oldPath = imgUrl.split('/').pop();
-            if (oldPath) await supabase.storage.from(BUCKET_NAME).remove([`public/${oldPath}`]);
+            if (oldPath) await _supabase.storage.from(BUCKET_NAME).remove([`public/${oldPath}`]);
         }
     }
 
@@ -198,12 +201,12 @@
         const ext = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36)}.${ext}`;
         const filePath = `public/${fileName}`;
-        const { error } = await supabase.storage.from(BUCKET_NAME).upload(filePath, file);
+        const { error } = await _supabase.storage.from(BUCKET_NAME).upload(filePath, file);
         if (error) throw new Error(`Upload falhou: ${error.message}`);
-        const { data: { publicUrl } } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+        const { data: { publicUrl } } = _supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
         if (oldUrl && oldUrl.includes(BUCKET_NAME)) {
             const oldPath = oldUrl.split('/').pop();
-            if (oldPath) await supabase.storage.from(BUCKET_NAME).remove([`public/${oldPath}`]);
+            if (oldPath) await _supabase.storage.from(BUCKET_NAME).remove([`public/${oldPath}`]);
         }
         return publicUrl;
     }
@@ -284,7 +287,7 @@
             let imgUrl = null;
             let oldImg = null;
             if (currentEditId) {
-                const { data } = await supabase.from('componentes').select('imagem_url').eq('id', currentEditId).single();
+                const { data } = await _supabase.from('componentes').select('imagem_url').eq('id', currentEditId).single();
                 oldImg = data?.imagem_url;
             }
             if (currentImageFile) {

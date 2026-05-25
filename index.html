@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventário Arduino - Admin/Visualizador</title>
+    <title>Inventário de Componentes Arduino</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, 'Segoe UI', sans-serif; }
         body { background: #f4f7fc; padding: 24px; }
         .container { max-width: 1400px; margin: 0 auto; }
         .header { text-align: center; margin-bottom: 32px; }
         h1 { background: linear-gradient(135deg, #00897b, #0056b3); background-clip: text; -webkit-background-clip: text; color: transparent; }
-        .login-card, .form-card, .components-grid { background: white; border-radius: 32px; padding: 28px; margin-bottom: 30px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
-        .form-card { display: none; }
-        .form-card.visible { display: block; }
-        .login-card input, .form-card input { width: 100%; padding: 12px 16px; border-radius: 28px; border: 1px solid #cbdde6; margin-bottom: 12px; }
-        button { background: #00897b; color: white; border: none; cursor: pointer; font-weight: bold; padding: 10px 20px; border-radius: 28px; margin-right: 10px; }
+        .form-card, .components-grid { background: white; border-radius: 32px; padding: 28px; margin-bottom: 30px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
+        .form-row { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px; }
+        .input-group { flex: 1; min-width: 180px; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: 600; }
+        .input-group input { width: 100%; padding: 12px 16px; border-radius: 28px; border: 1px solid #cbdde6; }
+        button { background: #00897b; color: white; border: none; cursor: pointer; font-weight: bold; padding: 12px 28px; border-radius: 40px; }
         button:hover { background: #00695c; }
-        .logout-btn { background: #bc5a5a; }
         .components-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
         .component-card { background: white; border-radius: 28px; overflow: hidden; border: 1px solid #e3f0f5; }
         .card-img { height: 170px; background: #e9f0f4; display: flex; align-items: center; justify-content: center; }
@@ -24,175 +24,105 @@
         .card-content { padding: 18px; }
         .component-name { font-size: 1.3rem; font-weight: 700; color: #0c4e6e; }
         .component-qty { display: inline-block; background: #e0f2e9; color: #006b5c; padding: 4px 14px; border-radius: 40px; margin: 10px 0; }
-        .card-actions { display: flex; gap: 12px; }
+        .card-actions { display: flex; gap: 12px; margin-top: 16px; }
         .edit-btn, .delete-btn { flex: 1; border: none; padding: 8px; border-radius: 40px; font-weight: 600; cursor: pointer; }
         .edit-btn { background: #eef2fc; color: #1f6392; }
         .delete-btn { background: #ffeeee; color: #bc5a5a; }
         .empty-state { text-align: center; padding: 60px; color: #6c8da3; }
-        footer { text-align: center; margin-top: 40px; color: #6590aa; }
         .img-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 20px; margin-top: 10px; }
+        footer { text-align: center; margin-top: 40px; color: #6590aa; }
+        @media (max-width: 640px) { .form-row { flex-direction: column; } }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1>⚡ Inventário Arduino</h1>
-        <p>Admin (edita) | Visualizador (só vê)</p>
+        <h1>⚡ Inventário de Componentes Arduino</h1>
+        <p>Adicione, edite ou exclua seus componentes – dados salvos na nuvem</p>
     </div>
 
-    <div id="login-area" class="login-card">
-        <h2>🔐 Login</h2>
-        <input type="email" id="email" placeholder="E-mail" value="admin@exemplo.com">
-        <input type="password" id="password" placeholder="Senha" value="admin123">
-        <button id="login-btn">Entrar</button>
-        <button id="logout-btn" class="logout-btn" style="display:none;">Sair</button>
-        <div id="login-message" style="margin-top: 12px; color: #bc5a5a;"></div>
-    </div>
-
-    <div id="form-card" class="form-card">
-        <h3>📦 Adicionar / Editar Componente</h3>
+    <div class="form-card">
+        <h2>📦 Adicionar / Editar Componente</h2>
         <form id="component-form">
             <input type="hidden" id="component-id">
-            <input type="text" id="comp-name" placeholder="Nome" required>
-            <input type="number" id="comp-quantity" placeholder="Quantidade" min="0" value="1" required>
-            <input type="file" id="comp-image" accept="image/*">
-            <img id="image-preview" class="img-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='%23bdd4e2'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E">
-            <div><button type="submit">💾 Salvar</button>
-            <button type="button" id="cancel-edit">✖️ Cancelar</button></div>
+            <div class="form-row">
+                <div class="input-group">
+                    <label>🔧 Nome do Componente *</label>
+                    <input type="text" id="comp-name" placeholder="Ex: Arduino Uno" required>
+                </div>
+                <div class="input-group">
+                    <label>🔢 Quantidade *</label>
+                    <input type="number" id="comp-quantity" min="0" value="1" required>
+                </div>
+                <div class="input-group">
+                    <label>🖼️ Imagem</label>
+                    <input type="file" id="comp-image" accept="image/*">
+                    <img id="image-preview" class="img-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='%23bdd4e2'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E">
+                </div>
+            </div>
+            <div>
+                <button type="submit">💾 Salvar Componente</button>
+                <button type="button" id="cancel-edit">✖️ Cancelar Edição</button>
+            </div>
         </form>
     </div>
 
     <div>
         <h2>📋 Meus Componentes</h2>
         <div id="components-container" class="components-grid">
-            <div class="empty-state">Faça login para ver os componentes.</div>
+            <div class="empty-state">Carregando...</div>
         </div>
     </div>
-    <footer>🔒 Controle de acesso via Supabase Auth</footer>
+    <footer>🗄️ Banco de dados Supabase (PostgreSQL) | Seus dados estão salvos na nuvem!</footer>
 </div>
 
 <script>
-    // ========== CONFIGURAÇÃO (já com suas chaves) ==========
+    // ========== CONFIGURAÇÃO DO SUPABASE (SUAS CHAVES) ==========
     const SUPABASE_URL = 'https://xrekjwhvaaepvljzivri.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZWtqd2h2YWFlcHZsanppdnJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NDQ1NTYsImV4cCI6MjA5NTIyMDU1Nn0.-0KA_natcTX7wIoGbBULbEnoGZhZjqDRDjNXMlOroG8';
-    
-    // Cria o cliente Supabase (sem conflito, pois a variável 'supabase' é a global da biblioteca)
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const BUCKET_NAME = 'componentes-imagens';
 
-    let currentUser = null;
-    let userRole = null;
     let currentEditId = null;
     let currentImageFile = null;
 
     // DOM
-    const loginArea = document.getElementById('login-area');
-    const formCard = document.getElementById('form-card');
-    const loginBtn = document.getElementById('login-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    const loginMessage = document.getElementById('login-message');
+    const form = document.getElementById('component-form');
     const compName = document.getElementById('comp-name');
     const compQty = document.getElementById('comp-quantity');
     const compImage = document.getElementById('comp-image');
     const imgPreview = document.getElementById('image-preview');
-    const cancelEdit = document.getElementById('cancel-edit');
-    const componentsContainer = document.getElementById('components-container');
+    const cancelBtn = document.getElementById('cancel-edit');
+    const container = document.getElementById('components-container');
 
-    async function fetchUserRole(userId) {
-        const { data, error } = await _supabase
-            .from('perfis')
-            .select('role')
-            .eq('id', userId)
-            .single();
-        if (error) {
-            console.warn('Erro ao buscar role, usando fallback visualizador:', error);
-            return 'visualizador';
-        }
-        return data?.role || 'visualizador';
-    }
-
-    async function checkSession() {
-        const { data: { session } } = await _supabase.auth.getSession();
-        if (session) {
-            currentUser = session.user;
-            userRole = await fetchUserRole(currentUser.id);
-            console.log(`✅ Logado: ${currentUser.email} | Role: ${userRole}`);
-            showApp(true);
-            loadComponents();
-        } else {
-            showApp(false);
-        }
-    }
-
-    function showApp(loggedIn) {
-        if (loggedIn) {
-            loginArea.style.display = 'none';
-            logoutBtn.style.display = 'inline-block';
-            if (userRole === 'admin') {
-                formCard.classList.add('visible');
-            } else {
-                formCard.classList.remove('visible');
-            }
-        } else {
-            loginArea.style.display = 'block';
-            logoutBtn.style.display = 'none';
-            formCard.classList.remove('visible');
-            componentsContainer.innerHTML = '<div class="empty-state">🔒 Faça login para acessar o inventário.</div>';
-            currentUser = null;
-            userRole = null;
-        }
-    }
-
-    loginBtn.addEventListener('click', async () => {
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-        loginMessage.innerText = '';
-        const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-            loginMessage.innerText = '❌ ' + error.message;
-            return;
-        }
-        currentUser = data.user;
-        userRole = await fetchUserRole(currentUser.id);
-        showApp(true);
-        loadComponents();
-    });
-
-    logoutBtn.addEventListener('click', async () => {
-        await _supabase.auth.signOut();
-        showApp(false);
-    });
-
+    // Funções CRUD
     async function loadComponents() {
-        if (!currentUser) return;
         try {
-            const { data, error } = await _supabase.from('componentes').select('*').order('id');
+            const { data, error } = await supabase.from('componentes').select('*').order('id');
             if (error) throw error;
             renderComponents(data || []);
         } catch (err) {
-            componentsContainer.innerHTML = `<div class="empty-state">⚠️ Erro: ${err.message}</div>`;
+            container.innerHTML = `<div class="empty-state">⚠️ Erro ao carregar: ${err.message}</div>`;
         }
     }
 
     async function addComponent(name, qty, imgUrl) {
-        const { error } = await _supabase.from('componentes').insert([{ nome: name, quantidade: qty, imagem_url: imgUrl }]);
+        const { error } = await supabase.from('componentes').insert([{ nome: name, quantidade: qty, imagem_url: imgUrl }]);
         if (error) throw error;
     }
 
     async function updateComponent(id, name, qty, imgUrl) {
-        const { error } = await _supabase.from('componentes').update({ nome: name, quantidade: qty, imagem_url: imgUrl }).eq('id', id);
+        const { error } = await supabase.from('componentes').update({ nome: name, quantidade: qty, imagem_url: imgUrl }).eq('id', id);
         if (error) throw error;
     }
 
     async function deleteComponent(id, imgUrl) {
-        const { error } = await _supabase.from('componentes').delete().eq('id', id);
+        const { error } = await supabase.from('componentes').delete().eq('id', id);
         if (error) throw error;
         if (imgUrl && imgUrl.includes(BUCKET_NAME)) {
             const oldPath = imgUrl.split('/').pop();
-            if (oldPath) await _supabase.storage.from(BUCKET_NAME).remove([`public/${oldPath}`]);
+            if (oldPath) await supabase.storage.from(BUCKET_NAME).remove([`public/${oldPath}`]);
         }
     }
 
@@ -201,22 +131,21 @@
         const ext = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36)}.${ext}`;
         const filePath = `public/${fileName}`;
-        const { error } = await _supabase.storage.from(BUCKET_NAME).upload(filePath, file);
+        const { error } = await supabase.storage.from(BUCKET_NAME).upload(filePath, file);
         if (error) throw new Error(`Upload falhou: ${error.message}`);
-        const { data: { publicUrl } } = _supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+        const { data: { publicUrl } } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
         if (oldUrl && oldUrl.includes(BUCKET_NAME)) {
             const oldPath = oldUrl.split('/').pop();
-            if (oldPath) await _supabase.storage.from(BUCKET_NAME).remove([`public/${oldPath}`]);
+            if (oldPath) await supabase.storage.from(BUCKET_NAME).remove([`public/${oldPath}`]);
         }
         return publicUrl;
     }
 
     function renderComponents(components) {
         if (!components.length) {
-            componentsContainer.innerHTML = '<div class="empty-state">✨ Nenhum componente cadastrado.</div>';
+            container.innerHTML = '<div class="empty-state">✨ Nenhum componente cadastrado. Adicione o primeiro!</div>';
             return;
         }
-        const isAdmin = (userRole === 'admin');
         const html = components.map(comp => `
             <div class="component-card">
                 <div class="card-img">
@@ -225,43 +154,41 @@
                 <div class="card-content">
                     <div class="component-name">${escapeHtml(comp.nome)}</div>
                     <div class="component-qty">📦 Quantidade: ${comp.quantidade}</div>
-                    ${isAdmin ? `
                     <div class="card-actions">
                         <button class="edit-btn" data-id="${comp.id}" data-nome="${escapeHtml(comp.nome)}" data-qty="${comp.quantidade}" data-img="${comp.imagem_url || ''}">✏️ Editar</button>
                         <button class="delete-btn" data-id="${comp.id}" data-img="${comp.imagem_url || ''}">🗑️ Excluir</button>
                     </div>
-                    ` : '<div style="font-size:0.8rem; color:#7f9eb5;">🔒 Apenas visualização</div>'}
                 </div>
             </div>
         `).join('');
-        componentsContainer.innerHTML = html;
+        container.innerHTML = html;
 
-        if (isAdmin) {
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    currentEditId = Number(btn.dataset.id);
-                    compName.value = btn.dataset.nome;
-                    compQty.value = btn.dataset.qty;
-                    const img = btn.dataset.img;
-                    imgPreview.src = img || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='%23bdd4e2'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E";
-                    currentImageFile = null;
-                    formCard.classList.add('visible');
-                    formCard.scrollIntoView({ behavior: 'smooth' });
-                });
+        // Eventos dos botões (dinâmicos)
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentEditId = Number(btn.dataset.id);
+                compName.value = btn.dataset.nome;
+                compQty.value = btn.dataset.qty;
+                const img = btn.dataset.img;
+                imgPreview.src = img || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='%23bdd4e2'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E";
+                currentImageFile = null;
+                document.querySelector('.form-card').scrollIntoView({ behavior: 'smooth' });
             });
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    if (confirm('Excluir este componente?')) {
-                        await deleteComponent(Number(btn.dataset.id), btn.dataset.img);
-                        if (currentEditId === Number(btn.dataset.id)) resetForm();
-                        await loadComponents();
-                    }
-                });
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (confirm('Excluir este componente?')) {
+                    await deleteComponent(Number(btn.dataset.id), btn.dataset.img);
+                    if (currentEditId === Number(btn.dataset.id)) resetForm();
+                    await loadComponents();
+                }
             });
-        }
+        });
     }
 
     function escapeHtml(str) { return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+
     function resetForm() {
         compName.value = '';
         compQty.value = '1';
@@ -271,23 +198,18 @@
         imgPreview.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='%23bdd4e2'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E";
     }
 
-    const componentForm = document.getElementById('component-form');
-    componentForm.addEventListener('submit', async (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (userRole !== 'admin') {
-            alert('Apenas administradores podem adicionar/editar.');
-            return;
-        }
         const name = compName.value.trim();
         const qty = parseInt(compQty.value, 10);
-        if (!name) return alert('Nome obrigatório');
+        if (!name) return alert('Nome é obrigatório');
         if (isNaN(qty)) return alert('Quantidade inválida');
 
         try {
             let imgUrl = null;
             let oldImg = null;
             if (currentEditId) {
-                const { data } = await _supabase.from('componentes').select('imagem_url').eq('id', currentEditId).single();
+                const { data } = await supabase.from('componentes').select('imagem_url').eq('id', currentEditId).single();
                 oldImg = data?.imagem_url;
             }
             if (currentImageFile) {
@@ -320,8 +242,10 @@
         }
     });
 
-    cancelEdit.addEventListener('click', resetForm);
-    checkSession();
+    cancelBtn.addEventListener('click', resetForm);
+
+    // Inicializa
+    loadComponents();
 </script>
 </body>
 </html>

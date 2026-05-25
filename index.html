@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventário Arduino - Controle de Acesso</title>
+    <title>Inventário Arduino - Admin/Visualizador</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, 'Segoe UI', sans-serif; }
         body { background: #f4f7fc; padding: 24px; }
@@ -13,12 +13,10 @@
         .login-card, .form-card, .components-grid { background: white; border-radius: 32px; padding: 28px; margin-bottom: 30px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
         .form-card { display: none; }
         .form-card.visible { display: block; }
-        .login-card input, .form-card input, .form-card button { padding: 12px 16px; border-radius: 28px; border: 1px solid #cbdde6; font-size: 1rem; margin: 8px 5px; width: calc(100% - 10px); }
-        button { background: #00897b; color: white; border: none; cursor: pointer; font-weight: bold; padding: 10px 20px; border-radius: 28px; }
+        .login-card input, .form-card input { width: 100%; padding: 12px 16px; border-radius: 28px; border: 1px solid #cbdde6; margin-bottom: 12px; }
+        button { background: #00897b; color: white; border: none; cursor: pointer; font-weight: bold; padding: 10px 20px; border-radius: 28px; margin-right: 10px; }
         button:hover { background: #00695c; }
-        .logout-btn { background: #bc5a5a; margin-left: 10px; }
-        .user-info { display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-bottom: 20px; }
-        .badge { background: #e0f2e9; padding: 6px 14px; border-radius: 40px; font-weight: 500; }
+        .logout-btn { background: #bc5a5a; }
         .components-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
         .component-card { background: white; border-radius: 28px; overflow: hidden; border: 1px solid #e3f0f5; }
         .card-img { height: 170px; background: #e9f0f4; display: flex; align-items: center; justify-content: center; }
@@ -33,7 +31,6 @@
         .empty-state { text-align: center; padding: 60px; color: #6c8da3; }
         footer { text-align: center; margin-top: 40px; color: #6590aa; }
         .img-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 20px; margin-top: 10px; }
-        @media (max-width: 640px) { body { padding: 16px; } }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -41,10 +38,9 @@
 <div class="container">
     <div class="header">
         <h1>⚡ Inventário Arduino</h1>
-        <p>Controle de acesso: Admin (edita) / Visualizador (só vê)</p>
+        <p>Admin (edita) | Visualizador (só vê)</p>
     </div>
 
-    <!-- Área de login -->
     <div id="login-area" class="login-card">
         <h2>🔐 Login</h2>
         <input type="email" id="email" placeholder="E-mail" value="admin@exemplo.com">
@@ -54,46 +50,40 @@
         <div id="login-message" style="margin-top: 12px; color: #bc5a5a;"></div>
     </div>
 
-    <!-- Formulário de componentes (visível apenas para admin) -->
     <div id="form-card" class="form-card">
-        <div class="form-title"><strong>📦 Adicionar / Editar Componente</strong></div>
+        <h3>📦 Adicionar / Editar Componente</h3>
         <form id="component-form">
-            <input type="hidden" id="component-id" value="">
-            <input type="text" id="comp-name" placeholder="Nome do componente" required>
+            <input type="hidden" id="component-id">
+            <input type="text" id="comp-name" placeholder="Nome" required>
             <input type="number" id="comp-quantity" placeholder="Quantidade" min="0" value="1" required>
             <input type="file" id="comp-image" accept="image/*">
-            <div id="image-preview-area"><img id="image-preview" class="img-preview" alt="Prévia" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='%23bdd4e2'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E"></div>
-            <div><button type="submit" class="btn-submit">💾 Salvar Componente</button>
-            <button type="button" id="cancel-edit-btn">✖️ Cancelar</button></div>
+            <img id="image-preview" class="img-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='%23bdd4e2'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E">
+            <div><button type="submit">💾 Salvar</button>
+            <button type="button" id="cancel-edit">✖️ Cancelar</button></div>
         </form>
     </div>
 
-    <!-- Lista de componentes -->
     <div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-            <h2>📋 Meus Componentes</h2>
-            <div class="badge" id="total-count-badge">0 itens</div>
-        </div>
+        <h2>📋 Meus Componentes</h2>
         <div id="components-container" class="components-grid">
-            <div class="empty-state">Carregando...</div>
+            <div class="empty-state">Faça login para ver os componentes.</div>
         </div>
     </div>
-    <footer>🔒 Dados protegidos por políticas RLS | Supabase Auth</footer>
+    <footer>🔒 Controle de acesso via Supabase Auth</footer>
 </div>
 
 <script>
-    // CONFIGURAÇÃO DO SUPABASE (substitua se necessário)
     const SUPABASE_URL = 'https://xrekjwhvaaepvljzivri.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZWtqd2h2YWFlcHZsanppdnJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NDQ1NTYsImV4cCI6MjA5NTIyMDU1Nn0.-0KA_natcTX7wIoGbBULbEnoGZhZjqDRDjNXMlOroG8';
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const BUCKET_NAME = 'componentes-imagens';
 
     let currentUser = null;
-    let userRole = null; // 'admin' ou 'visualizador'
+    let userRole = null;
     let currentEditId = null;
     let currentImageFile = null;
 
-    // Elementos DOM
+    // DOM
     const loginArea = document.getElementById('login-area');
     const formCard = document.getElementById('form-card');
     const loginBtn = document.getElementById('login-btn');
@@ -101,33 +91,32 @@
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const loginMessage = document.getElementById('login-message');
-    const componentForm = document.getElementById('component-form');
     const compName = document.getElementById('comp-name');
     const compQty = document.getElementById('comp-quantity');
     const compImage = document.getElementById('comp-image');
     const imgPreview = document.getElementById('image-preview');
-    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+    const cancelEdit = document.getElementById('cancel-edit');
     const componentsContainer = document.getElementById('components-container');
-    const totalBadge = document.getElementById('total-count-badge');
 
-    // Função para extrair a role do JWT do usuário logado
-    async function getUserRoleFromToken() {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-            // O JWT contém os metadados do usuário, incluindo raw_app_meta_data
-            const metadata = session.user?.app_metadata || {};
-            return metadata.role || 'visualizador';
+    async function fetchUserRole(userId) {
+        const { data, error } = await supabase
+            .from('perfis')
+            .select('role')
+            .eq('id', userId)
+            .single();
+        if (error) {
+            console.warn('Erro ao buscar role, usando fallback visualizador:', error);
+            return 'visualizador';
         }
-        return null;
+        return data?.role || 'visualizador';
     }
 
-    // Verifica sessão existente
     async function checkSession() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
             currentUser = session.user;
-            userRole = await getUserRoleFromToken();
-            console.log('Usuário:', currentUser.email, 'Role:', userRole);
+            userRole = await fetchUserRole(currentUser.id);
+            console.log(`✅ Logado: ${currentUser.email} | Role: ${userRole}`);
             showApp(true);
             loadComponents();
         } else {
@@ -135,8 +124,8 @@
         }
     }
 
-    function showApp(isLoggedIn) {
-        if (isLoggedIn) {
+    function showApp(loggedIn) {
+        if (loggedIn) {
             loginArea.style.display = 'none';
             logoutBtn.style.display = 'inline-block';
             if (userRole === 'admin') {
@@ -148,37 +137,32 @@
             loginArea.style.display = 'block';
             logoutBtn.style.display = 'none';
             formCard.classList.remove('visible');
-            componentsContainer.innerHTML = '<div class="empty-state">Faça login para visualizar o inventário.</div>';
+            componentsContainer.innerHTML = '<div class="empty-state">🔒 Faça login para acessar o inventário.</div>';
             currentUser = null;
             userRole = null;
         }
     }
 
-    // Login
     loginBtn.addEventListener('click', async () => {
         const email = emailInput.value.trim();
         const password = passwordInput.value;
         loginMessage.innerText = '';
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-            loginMessage.innerText = 'Erro: ' + error.message;
+            loginMessage.innerText = '❌ ' + error.message;
             return;
         }
         currentUser = data.user;
-        userRole = await getUserRoleFromToken();
+        userRole = await fetchUserRole(currentUser.id);
         showApp(true);
         loadComponents();
     });
 
-    // Logout
     logoutBtn.addEventListener('click', async () => {
         await supabase.auth.signOut();
-        currentUser = null;
-        userRole = null;
         showApp(false);
     });
 
-    // CRUD de componentes
     async function loadComponents() {
         if (!currentUser) return;
         try {
@@ -186,56 +170,54 @@
             if (error) throw error;
             renderComponents(data || []);
         } catch (err) {
-            console.error(err);
-            componentsContainer.innerHTML = `<div class="empty-state">Erro ao carregar: ${err.message}</div>`;
+            componentsContainer.innerHTML = `<div class="empty-state">⚠️ Erro: ${err.message}</div>`;
         }
     }
 
-    async function addComponent(name, quantity, imageUrl) {
-        const { error } = await supabase.from('componentes').insert([{ nome: name, quantidade: quantity, imagem_url: imageUrl }]);
+    async function addComponent(name, qty, imgUrl) {
+        const { error } = await supabase.from('componentes').insert([{ nome: name, quantidade: qty, imagem_url: imgUrl }]);
         if (error) throw error;
     }
 
-    async function updateComponent(id, name, quantity, imageUrl) {
-        const { error } = await supabase.from('componentes').update({ nome: name, quantidade: quantity, imagem_url: imageUrl }).eq('id', id);
+    async function updateComponent(id, name, qty, imgUrl) {
+        const { error } = await supabase.from('componentes').update({ nome: name, quantidade: qty, imagem_url: imgUrl }).eq('id', id);
         if (error) throw error;
     }
 
-    async function deleteComponent(id, imageUrl) {
+    async function deleteComponent(id, imgUrl) {
         const { error } = await supabase.from('componentes').delete().eq('id', id);
         if (error) throw error;
-        if (imageUrl && imageUrl.includes(BUCKET_NAME)) {
-            const oldPath = imageUrl.split('/').pop();
+        if (imgUrl && imgUrl.includes(BUCKET_NAME)) {
+            const oldPath = imgUrl.split('/').pop();
             if (oldPath) await supabase.storage.from(BUCKET_NAME).remove([`public/${oldPath}`]);
         }
     }
 
-    async function uploadImage(file, oldImageUrl = null) {
+    async function uploadImage(file, oldUrl = null) {
         if (!file) return null;
         const ext = file.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${ext}`;
+        const fileName = `${Date.now()}_${Math.random().toString(36)}.${ext}`;
         const filePath = `public/${fileName}`;
         const { error } = await supabase.storage.from(BUCKET_NAME).upload(filePath, file);
         if (error) throw new Error(`Upload falhou: ${error.message}`);
         const { data: { publicUrl } } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
-        if (oldImageUrl && oldImageUrl.includes(BUCKET_NAME)) {
-            const oldPath = oldImageUrl.split('/').pop();
+        if (oldUrl && oldUrl.includes(BUCKET_NAME)) {
+            const oldPath = oldUrl.split('/').pop();
             if (oldPath) await supabase.storage.from(BUCKET_NAME).remove([`public/${oldPath}`]);
         }
         return publicUrl;
     }
 
     function renderComponents(components) {
-        totalBadge.innerText = `${components.length} ${components.length === 1 ? 'item' : 'itens'}`;
         if (!components.length) {
-            componentsContainer.innerHTML = '<div class="empty-state">Nenhum componente cadastrado.</div>';
+            componentsContainer.innerHTML = '<div class="empty-state">✨ Nenhum componente cadastrado.</div>';
             return;
         }
         const isAdmin = (userRole === 'admin');
         const html = components.map(comp => `
             <div class="component-card">
                 <div class="card-img">
-                    ${comp.imagem_url ? `<img src="${comp.imagem_url}" alt="${escapeHtml(comp.nome)}">` : '<div class="empty-state" style="height:100%;">📷 Sem imagem</div>'}
+                    ${comp.imagem_url ? `<img src="${comp.imagem_url}" alt="${escapeHtml(comp.nome)}">` : '<div class="empty-state">📷 Sem imagem</div>'}
                 </div>
                 <div class="card-content">
                     <div class="component-name">${escapeHtml(comp.nome)}</div>
@@ -257,17 +239,16 @@
                     currentEditId = Number(btn.dataset.id);
                     compName.value = btn.dataset.nome;
                     compQty.value = btn.dataset.qty;
-                    const imgUrl = btn.dataset.img;
-                    if (imgUrl) imgPreview.src = imgUrl;
-                    else imgPreview.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='%23bdd4e2'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E";
+                    const img = btn.dataset.img;
+                    imgPreview.src = img || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='%23bdd4e2'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E";
                     currentImageFile = null;
                     formCard.classList.add('visible');
-                    document.querySelector('.form-card').scrollIntoView({ behavior: 'smooth' });
+                    formCard.scrollIntoView({ behavior: 'smooth' });
                 });
             });
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', async () => {
-                    if (confirm('Excluir componente?')) {
+                    if (confirm('Excluir este componente?')) {
                         await deleteComponent(Number(btn.dataset.id), btn.dataset.img);
                         if (currentEditId === Number(btn.dataset.id)) resetForm();
                         await loadComponents();
@@ -287,6 +268,7 @@
         imgPreview.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='%23bdd4e2'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E";
     }
 
+    const componentForm = document.getElementById('component-form');
     componentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (userRole !== 'admin') {
@@ -294,27 +276,26 @@
             return;
         }
         const name = compName.value.trim();
-        const quantity = parseInt(compQty.value, 10);
+        const qty = parseInt(compQty.value, 10);
         if (!name) return alert('Nome obrigatório');
-        if (isNaN(quantity) || quantity < 0) return alert('Quantidade inválida');
+        if (isNaN(qty)) return alert('Quantidade inválida');
 
         try {
-            let imageUrl = null;
-            let oldImageUrl = null;
+            let imgUrl = null;
+            let oldImg = null;
             if (currentEditId) {
                 const { data } = await supabase.from('componentes').select('imagem_url').eq('id', currentEditId).single();
-                oldImageUrl = data?.imagem_url;
+                oldImg = data?.imagem_url;
             }
             if (currentImageFile) {
-                imageUrl = await uploadImage(currentImageFile, oldImageUrl);
-            } else if (currentEditId && oldImageUrl) {
-                imageUrl = oldImageUrl;
+                imgUrl = await uploadImage(currentImageFile, oldImg);
+            } else if (currentEditId && oldImg) {
+                imgUrl = oldImg;
             }
-
             if (currentEditId) {
-                await updateComponent(currentEditId, name, quantity, imageUrl);
+                await updateComponent(currentEditId, name, qty, imgUrl);
             } else {
-                await addComponent(name, quantity, imageUrl);
+                await addComponent(name, qty, imgUrl);
             }
             resetForm();
             await loadComponents();
@@ -336,7 +317,7 @@
         }
     });
 
-    cancelEditBtn.addEventListener('click', resetForm);
+    cancelEdit.addEventListener('click', resetForm);
     checkSession();
 </script>
 </body>

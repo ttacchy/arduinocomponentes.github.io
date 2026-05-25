@@ -13,8 +13,8 @@
         .login-card, .form-card, .components-grid { background: white; border-radius: 32px; padding: 28px; margin-bottom: 30px; box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
         .form-card { display: none; }
         .form-card.visible { display: block; }
-        .login-card input, .form-card input, .form-card button { padding: 12px 16px; border-radius: 28px; border: 1px solid #cbdde6; font-size: 1rem; margin: 8px 5px; }
-        button { background: #00897b; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .login-card input, .form-card input, .form-card button { padding: 12px 16px; border-radius: 28px; border: 1px solid #cbdde6; font-size: 1rem; margin: 8px 5px; width: calc(100% - 10px); }
+        button { background: #00897b; color: white; border: none; cursor: pointer; font-weight: bold; padding: 10px 20px; border-radius: 28px; }
         button:hover { background: #00695c; }
         .logout-btn { background: #bc5a5a; margin-left: 10px; }
         .user-info { display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-bottom: 20px; }
@@ -82,13 +82,14 @@
 </div>
 
 <script>
+    // CONFIGURAÇÃO DO SUPABASE (substitua se necessário)
     const SUPABASE_URL = 'https://xrekjwhvaaepvljzivri.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZWtqd2h2YWFlcHZsanppdnJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NDQ1NTYsImV4cCI6MjA5NTIyMDU1Nn0.-0KA_natcTX7wIoGbBULbEnoGZhZjqDRDjNXMlOroG8';
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const BUCKET_NAME = 'componentes-imagens';
 
     let currentUser = null;
-    let userRole = null;  // 'admin' ou 'visualizador'
+    let userRole = null; // 'admin' ou 'visualizador'
     let currentEditId = null;
     let currentImageFile = null;
 
@@ -105,16 +106,28 @@
     const compQty = document.getElementById('comp-quantity');
     const compImage = document.getElementById('comp-image');
     const imgPreview = document.getElementById('image-preview');
-    const cancelEdit = document.getElementById('cancel-edit-btn');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
     const componentsContainer = document.getElementById('components-container');
     const totalBadge = document.getElementById('total-count-badge');
 
-    // Verifica sessão existente ao carregar
+    // Função para extrair a role do JWT do usuário logado
+    async function getUserRoleFromToken() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            // O JWT contém os metadados do usuário, incluindo raw_app_meta_data
+            const metadata = session.user?.app_metadata || {};
+            return metadata.role || 'visualizador';
+        }
+        return null;
+    }
+
+    // Verifica sessão existente
     async function checkSession() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
             currentUser = session.user;
-            await loadUserRole();
+            userRole = await getUserRoleFromToken();
+            console.log('Usuário:', currentUser.email, 'Role:', userRole);
             showApp(true);
             loadComponents();
         } else {
@@ -122,35 +135,15 @@
         }
     }
 
-    // Carrega a role do usuário (admin ou visualizador)
-    async function loadUserRole() {
-        if (!currentUser) return;
-        const { data, error } = await supabase
-            .from('perfis')
-            .select('role')
-            .eq('id', currentUser.id)
-            .single();
-        if (error || !data) {
-            console.warn('Perfil não encontrado, assumindo visualizador');
-            userRole = 'visualizador';
-        } else {
-            userRole = data.role;
-        }
-        // Atualiza interface conforme role
-        if (userRole === 'admin') {
-            formCard.classList.add('visible');
-        } else {
-            formCard.classList.remove('visible');
-        }
-        console.log('Usuário logado:', currentUser.email, 'role:', userRole);
-    }
-
-    // Exibe ou oculta elementos conforme login
     function showApp(isLoggedIn) {
         if (isLoggedIn) {
             loginArea.style.display = 'none';
             logoutBtn.style.display = 'inline-block';
-            // formulário já controlado pela role
+            if (userRole === 'admin') {
+                formCard.classList.add('visible');
+            } else {
+                formCard.classList.remove('visible');
+            }
         } else {
             loginArea.style.display = 'block';
             logoutBtn.style.display = 'none';
@@ -172,7 +165,7 @@
             return;
         }
         currentUser = data.user;
-        await loadUserRole();
+        userRole = await getUserRoleFromToken();
         showApp(true);
         loadComponents();
     });
@@ -185,7 +178,7 @@
         showApp(false);
     });
 
-    // -------------------- CRUD de componentes (com verificação de role no front-end) --------------------
+    // CRUD de componentes
     async function loadComponents() {
         if (!currentUser) return;
         try {
@@ -232,7 +225,6 @@
         return publicUrl;
     }
 
-    // Renderização condicional: botões só aparecem se admin
     function renderComponents(components) {
         totalBadge.innerText = `${components.length} ${components.length === 1 ? 'item' : 'itens'}`;
         if (!components.length) {
@@ -295,7 +287,6 @@
         imgPreview.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='%23bdd4e2'%3E%3Cpath d='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E";
     }
 
-    // Submissão do formulário (apenas para admin)
     componentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (userRole !== 'admin') {
@@ -345,9 +336,7 @@
         }
     });
 
-    cancelEdit.addEventListener('click', resetForm);
-
-    // Inicializa
+    cancelEditBtn.addEventListener('click', resetForm);
     checkSession();
 </script>
 </body>
